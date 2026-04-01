@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nirnay</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    #app-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <iframe id="app-frame" title="Nirnay App" src="pages/nirnay.html"></iframe>
+
+  <script>
+    (function () {
+      var routes = {
+        login: "pages/login.html",
+        signup: "pages/signup.html",
+        dashboard: "pages/dashboard.html",
+        upload: "pages/nirnay-upload.html",
+        decisiontree: "pages/decisiontree.html",
+        "nirnay-upload": "pages/nirnay-upload.html",
+        nirnay: "pages/nirnay.html",
+        team: "pages/team.html"
+      };
+
+      var frame = document.getElementById("app-frame");
+
+      function getRouteFromHash() {
+        var hash = window.location.hash || "#upload";
+        return hash.replace(/^#/, "").trim().toLowerCase();
+      }
+
+      function setPageFromHash() {
+        var key = getRouteFromHash();
+        var target = routes[key] || routes.upload;
+
+        if (frame.getAttribute("src") !== target) {
+          frame.setAttribute("src", target);
+        }
+      }
+
+      window.addEventListener("hashchange", setPageFromHash);
+      setPageFromHash();
+    })();
+  </script>
+</body>
+</html>
