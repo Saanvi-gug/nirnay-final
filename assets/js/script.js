@@ -82,7 +82,7 @@ async function signInWithGoogle() {
     });
 
     console.log("Google login successful");
-    window.location.href = 'dashboard.html';
+    window.location.href = '../index.html#dashboard';
   } catch (error) {
     displayError('login-error', error.message);
     displayError('signup-error', error.message);
@@ -118,7 +118,7 @@ async function signInWithEmail() {
     await saveUserToFirestore(user, { provider: 'email' });
 
     // go to dashboard
-    window.location.href = "dashboard.html";
+    window.location.href = "../index.html#dashboard";
 
   } catch (error) {
     if (error.code === 'auth/user-not-found') {
@@ -166,7 +166,7 @@ async function signUpWithEmail() {
     });
 
     // go to dashboard
-    window.location.href = 'dashboard.html';
+    window.location.href = '../index.html#dashboard';
 
   } catch (error) {
     displayError('signup-error', error.message);

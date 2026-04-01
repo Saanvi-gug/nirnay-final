@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // After generating, reload the page to show the new report.
             // The sourceId will be gone from the URL, and the generic /api/ai/report will be fetched.
-            window.location.href = 'dashboard.html';
+            window.location.href = '../index.html#dashboard';
 
         } catch (error) {
             console.error('Error generating AI report:', error);
