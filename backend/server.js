@@ -32,6 +32,31 @@ const pagesDirPath = firstExistingPath([
 
 const staticRootPath = indexFilePath ? path.dirname(indexFilePath) : null;
 
+function sendFrontendUnavailablePage(res) {
+  res.status(200).type("html").send(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nirnay API</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 40px; background: #f7f8fb; color: #111827; }
+    .card { max-width: 760px; margin: 0 auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; }
+    h1 { margin: 0 0 12px; font-size: 24px; }
+    p { margin: 8px 0; line-height: 1.6; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Nirnay backend is running</h1>
+    <p>Frontend files were not found in this deployment artifact, so the app shell could not be served.</p>
+    <p>API check: <code>/api/test</code></p>
+  </div>
+</body>
+</html>`);
+}
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -60,7 +85,7 @@ if (staticRootPath) {
 
 app.get("/", (req, res) => {
   if (!indexFilePath) {
-    return res.status(404).json({ error: "index.html not found on server" });
+    return sendFrontendUnavailablePage(res);
   }
   res.sendFile(indexFilePath);
 });
@@ -68,7 +93,10 @@ app.get("/", (req, res) => {
 // ✅ Fallback route (NO wildcard)
 app.use((req, res) => {
   if (!indexFilePath) {
-    return res.status(404).json({ error: "Frontend files not found in deployment" });
+    if (req.path.startsWith("/api")) {
+      return res.status(404).json({ error: "API route not found" });
+    }
+    return sendFrontendUnavailablePage(res);
   }
   res.sendFile(indexFilePath);
 });
