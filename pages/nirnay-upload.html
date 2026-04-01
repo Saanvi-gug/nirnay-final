@@ -1363,7 +1363,7 @@ async function fetchAiReport() {
     ? `/api/ai-reports?mode=ai&sourceIds=${encodeURIComponent(connectedIds.join(','))}`
     : '/api/ai-reports?mode=ai';
 
-  const response = await fetch('http://localhost:5000' + query);
+  const response = await fetch('' + query);
   const data = await response.json();
 
   if (!response.ok) {
@@ -1391,7 +1391,7 @@ async function fetchSheet() {
   button.disabled = true;
 
   try {
-    const response = await fetch("http://localhost:5000/api/fetch-sheet", {
+    const response = await fetch("/api/fetch-sheet", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -1435,7 +1435,7 @@ async function fetchForums() {
   button.disabled = true;
 
   try {
-    const response = await fetch('http://localhost:5000/api/fetch-forums', {
+    const response = await fetch('/api/fetch-forums', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
