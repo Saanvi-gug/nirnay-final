@@ -1354,24 +1354,94 @@ function exportAiReportPdf() {
   showToast('success', 'PDF exported', `Downloaded ${fileName}`);
 }
 
-async function fetchAiReport() {
-  const connectedIds = sources
-    .filter((s) => s.status === 'connected' && s.sourceId)
-    .map((s) => s.sourceId);
-
-  const query = connectedIds.length
-    ? `/api/ai-reports?mode=ai&sourceIds=${encodeURIComponent(connectedIds.join(','))}`
-    : '/api/ai-reports?mode=ai';
-
-  const response = await fetch('' + query);
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error((data && data.meta && data.meta.error) || data.error || 'Failed to generate AI report');
+async function readApiResponse(response, fallbackMessage) {
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    try {
+      return await response.json();
+    } catch (err) {
+      // Some hosts return plain text with JSON content-type on 404.
+    }
   }
 
-  renderAiReport(data);
-  return data;
+  const text = await response.text();
+  return { error: text || fallbackMessage };
+}
+
+function normalizeReportForUploadUi(rawReport) {
+  const sentiment = rawReport?.sentimentAnalysis || {};
+  const topIssues = Array.isArray(rawReport?.topIssues) ? rawReport.topIssues : [];
+  const insights = Array.isArray(rawReport?.insights) ? rawReport.insights : [];
+
+  const totalFeedbackKpi = (rawReport?.kpis || []).find((k) => k.label === 'Total Feedback');
+  const newSourcesKpi = (rawReport?.kpis || []).find((k) => k.label === 'New Sources');
+
+  const sentimentLabel = sentiment.positive > sentiment.negative
+    ? 'positive'
+    : sentiment.negative > sentiment.positive
+      ? 'negative'
+      : 'mixed';
+
+  const recommendations = topIssues.map((issue) => `Prioritize ${issue.category.toLowerCase()} improvements (${issue.mentions} mentions).`);
+  const improvements = topIssues.map((issue) => issue.title);
+  const risks = sentiment.negative > 0
+    ? [`${sentiment.negative} negative entries detected across uploaded feedback.`]
+    : ['No critical risks detected in current data.'];
+
+  return {
+    summary: {
+      totalRecords: Number(totalFeedbackKpi?.value || 0),
+      totalTexts: Number(totalFeedbackKpi?.value || 0),
+      totalSources: Number(newSourcesKpi?.value || 0),
+      sentiment: { label: sentimentLabel },
+      topThemes: topIssues.slice(0, 5).map((issue) => ({
+        theme: issue.category,
+        count: issue.mentions,
+        share: 0
+      }))
+    },
+    report: {
+      overview: insights[0] || 'AI report generated successfully.',
+      insights: insights.length ? insights : ['No insights generated yet.'],
+      recommendations: recommendations.length ? recommendations : ['Review recent records and prioritize recurring concerns.'],
+      improvements: improvements.length ? improvements : ['No specific improvement areas detected.'],
+      risks,
+      nextActions: (recommendations.length ? recommendations : ['Review uploaded records and assign owners.']).map((action) => ({
+        action,
+        ownerHint: 'Team owner',
+        priority: 'medium'
+      }))
+    },
+    meta: {
+      generator: 'rules',
+      provider: 'local',
+      model: 'backend-ai-report'
+    }
+  };
+}
+
+async function fetchAiReport() {
+  const generateResponse = await fetch('/api/ai/generate-report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+
+  if (!generateResponse.ok) {
+    const generateError = await readApiResponse(generateResponse, 'Failed to generate AI report');
+    throw new Error(generateError.details || generateError.error || 'Failed to generate AI report');
+  }
+
+  const reportResponse = await fetch('/api/ai/report');
+  const reportData = await readApiResponse(reportResponse, 'Failed to load generated report');
+
+  if (!reportResponse.ok) {
+    throw new Error(reportData.details || reportData.error || 'Failed to load generated report');
+  }
+
+  const normalized = normalizeReportForUploadUi(reportData);
+  renderAiReport(normalized);
+  return normalized;
 }
 
 
@@ -1631,10 +1701,6 @@ function renderSources() {
     table.style.display = 'block';
     sub.textContent = `${totalRows.toLocaleString()} total records ready`;
     btnAnalyze.disabled = connectedCount === 0 || analyzing;
-    const connectedIds = sources.filter(s => s.status === 'connected').map(s => s.sourceId);
-    const query = connectedIds.length
-      ? `/api/ai-reports?mode=ai&sourceIds=${encodeURIComponent(connectedIds.join(','))}`
-      : '/api/ai-reports?mode=ai';
     analyzeHint.textContent = connectedCount > 0
       ? `${connectedCount} source${connectedCount > 1 ? 's' : ''} · ${totalRows.toLocaleString()} records`
       : 'Waiting for sources to finish uploading…';
