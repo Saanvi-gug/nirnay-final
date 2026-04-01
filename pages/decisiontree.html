@@ -809,23 +809,66 @@ async function loadTree() {
   const svgLayer = document.getElementById('svg-layer');
 
   async function fetchApi(path) {
-    const response = await fetch(`${API_BASE}${path}`);
+    const response = await fetch(path);
     if (!response.ok) throw new Error(`Failed to fetch ${path}`);
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error(`Expected JSON from ${path}, got ${contentType}`);
+    }
     return response.json();
+  }
+
+  function buildMockDecisionTree(reportData) {
+    // Convert AI report sentiment/categories into a decision tree structure
+    const topIssues = reportData?.topIssues || [];
+    const sentiment = reportData?.sentimentAnalysis || {};
+
+    return {
+      roots: topIssues.length > 0
+        ? topIssues.slice(0, 3).map((issue, idx) => ({
+            problem: `${issue.category} - Primary Issue ${idx + 1}`,
+            subFactors: [
+              { text: `${issue.mentions} mentions detected` },
+              { text: `High priority concern` }
+            ],
+            branches: [
+              {
+                condition: `Issue category: ${issue.category}`,
+                actions: [
+                  {
+                    action: `Prioritize ${issue.category.toLowerCase()} improvements`,
+                    finalActions: [
+                      { text: 'Assign to owner' },
+                      { text: 'Track resolution' }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }))
+        : []
+    };
   }
   
   try {
-    // First check if data exists
-    const data = await fetchApi('/api/data');
-    
-    // Evaluate whether there is uploaded data
+    loadingMsg.style.display = 'flex';
+    emptyState.classList.remove('show');
+
+    // Try to fetch data sources
     let hasData = false;
-    if (Array.isArray(data)) {
-      hasData = data.length > 0;
-    } else if (data && Array.isArray(data.data)) {
-      hasData = data.data.length > 0;
-    } else if (data && typeof data.totalRecords === 'number') {
-      hasData = data.totalRecords > 0;
+    try {
+      const sourcesData = await fetchApi('/api/sources');
+      const sources = sourcesData?.sources || [];
+      hasData = sources.length > 0;
+    } catch (err) {
+      console.warn('Could not fetch sources:', err.message);
+      // Fallback: check if we can get direct data
+      try {
+        const directData = await fetchApi('/api/data');
+        hasData = Array.isArray(directData) ? directData.length > 0 : false;
+      } catch (err2) {
+        console.warn('Could not fetch data:', err2.message);
+      }
     }
 
     if (!hasData) {
@@ -836,32 +879,33 @@ async function loadTree() {
       return;
     }
 
-    console.log('✅ Data exists. Fetching decision tree...');
-    loadingMsg.style.display = 'flex';
-    emptyState.classList.remove('show');
-    loadingMsg.style.display = 'flex';
-    emptyState.classList.remove('show');
-    
-    const treeData = await fetchApi('/api/decision-tree?mode=ai');
-    console.log("🌳 TREE DATA:", treeData);
-    if (treeData.meta?.generator !== 'ai') {
-      console.warn("⚠️ AI not used, fallback active:", treeData.meta);
+    console.log('✅ Data sources found. Generating decision tree from report...');
+
+    // Fetch AI report to build tree structure
+    let treeData = null;
+    try {
+      const reportData = await fetchApi('/api/ai/report');
+      treeData = buildMockDecisionTree(reportData);
+    } catch (err) {
+      console.warn('Report not ready, using empty tree:', err.message);
+      treeData = { roots: [] };
     }
-    
+
     // Check if tree has any roots
     if (treeData.roots && treeData.roots.length > 0) {
-      console.log('✅ Decision tree data received from server:', treeData);
+      console.log('✅ Decision tree generated:', treeData);
       renderTree(treeData);
     } else {
-      console.warn('⚠️ Decision tree is empty. Showing generate prompt.');
+      console.warn('⚠️ No issues found to build tree. Show empty state.');
       loadingMsg.style.display = 'none';
       emptyState.classList.add('show');
+      emptyState.innerHTML = '<div class="empty-icon">🌿</div><div class="empty-text">No decision tree available yet. Generate an AI report from your uploaded data first.</div>';
     }
   } catch(err) {
     console.error('Error loading tree:', err);
     document.getElementById('loading-msg').style.display = 'none';
     emptyState.classList.add('show');
-    emptyState.innerHTML = '<div class="empty-icon">⚠️</div><div class="empty-text">Error generating decision tree. Please try again.</div>';
+    emptyState.innerHTML = '<div class="empty-icon">⚠️</div><div class="empty-text">Error generating decision tree. Please upload data and generate a report first.</div>';
   }
 }
 

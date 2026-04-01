@@ -1360,7 +1360,7 @@ async function readApiResponse(response, fallbackMessage) {
     try {
       return await response.json();
     } catch (err) {
-      // Some hosts return plain text with JSON content-type on 404.
+      return { error: `Invalid JSON response: ${err.message}` };
     }
   }
 
@@ -1369,6 +1369,10 @@ async function readApiResponse(response, fallbackMessage) {
 }
 
 function normalizeReportForUploadUi(rawReport) {
+  if (!rawReport || typeof rawReport !== 'object') {
+    throw new Error('Invalid report format received from backend');
+  }
+
   const sentiment = rawReport?.sentimentAnalysis || {};
   const topIssues = Array.isArray(rawReport?.topIssues) ? rawReport.topIssues : [];
   const insights = Array.isArray(rawReport?.insights) ? rawReport.insights : [];
@@ -1421,27 +1425,43 @@ function normalizeReportForUploadUi(rawReport) {
 }
 
 async function fetchAiReport() {
-  const generateResponse = await fetch('/api/ai/generate-report', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({})
-  });
+  try {
+    console.log('Starting report generation...');
+    
+    const generateResponse = await fetch('/api/ai/generate-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
 
-  if (!generateResponse.ok) {
-    const generateError = await readApiResponse(generateResponse, 'Failed to generate AI report');
-    throw new Error(generateError.details || generateError.error || 'Failed to generate AI report');
+    if (!generateResponse.ok) {
+      const generateError = await readApiResponse(generateResponse, 'Failed to generate AI report');
+      const errorMsg = generateError.details || generateError.error || 'Failed to generate AI report';
+      throw new Error(errorMsg);
+    }
+
+    console.log('Report generated. Fetching...');
+
+    const reportResponse = await fetch('/api/ai/report');
+    const reportData = await readApiResponse(reportResponse, 'Failed to load generated report');
+
+    if (!reportResponse.ok) {
+      const errorMsg = reportData.details || reportData.error || `Failed to load generated report (${reportResponse.status})`;
+      throw new Error(errorMsg);
+    }
+
+    if (!reportData || typeof reportData !== 'object') {
+      throw new Error('Server returned invalid report format');
+    }
+
+    console.log('Report loaded successfully');
+    const normalized = normalizeReportForUploadUi(reportData);
+    renderAiReport(normalized);
+    return normalized;
+  } catch (error) {
+    console.error('Report fetch error:', error);
+    throw error;
   }
-
-  const reportResponse = await fetch('/api/ai/report');
-  const reportData = await readApiResponse(reportResponse, 'Failed to load generated report');
-
-  if (!reportResponse.ok) {
-    throw new Error(reportData.details || reportData.error || 'Failed to load generated report');
-  }
-
-  const normalized = normalizeReportForUploadUi(reportData);
-  renderAiReport(normalized);
-  return normalized;
 }
 
 
