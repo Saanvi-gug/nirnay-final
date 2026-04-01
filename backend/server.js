@@ -13,7 +13,7 @@ app.use(express.static(path.join(__dirname, "../pages")));
 app.use("/assets", express.static(path.join(__dirname, "../assets")));
 
 // Default route (index.html)
-app.get("*", (req, res) => {
+app.get("/*", (req, res) => {
   res.sendFile(path.join(__dirname, "../pages/index.html"));
 });
 
