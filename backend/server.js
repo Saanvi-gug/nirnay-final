@@ -8,12 +8,13 @@ app.get("/api/test", (req, res) => {
   res.json({ message: "API working 🚀" });
 });
 
-// Serve frontend files
+
+// Serve static files
 app.use(express.static(path.join(__dirname, "../pages")));
 app.use("/assets", express.static(path.join(__dirname, "../assets")));
 
-// Default route (index.html)
-app.get("/*", (req, res) => {
+// ✅ Fallback route (NO wildcard)
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, "../pages/index.html"));
 });
 
