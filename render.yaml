@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: nirnay-protex
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm --prefix backend install
+    startCommand: node backend/server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20
