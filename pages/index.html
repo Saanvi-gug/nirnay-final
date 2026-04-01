@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nirnay</title>
+
   <style>
     html, body {
       margin: 0;
@@ -22,20 +23,23 @@
     }
   </style>
 </head>
+
 <body>
-  <iframe id="app-frame" title="Nirnay App" src="pages/nirnay.html"></iframe>
+  <!-- ✅ FIXED: removed "pages/" -->
+  <iframe id="app-frame" title="Nirnay App" src="nirnay.html"></iframe>
 
   <script>
     (function () {
+      // ✅ FIXED: removed "pages/" from all routes
       var routes = {
-        login: "pages/login.html",
-        signup: "pages/signup.html",
-        dashboard: "pages/dashboard.html",
-        upload: "pages/nirnay-upload.html",
-        decisiontree: "pages/decisiontree.html",
-        "nirnay-upload": "pages/nirnay-upload.html",
-        nirnay: "pages/nirnay.html",
-        team: "pages/team.html"
+        login: "login.html",
+        signup: "signup.html",
+        dashboard: "dashboard.html",
+        upload: "nirnay-upload.html",
+        decisiontree: "decisiontree.html",
+        "nirnay-upload": "nirnay-upload.html",
+        nirnay: "nirnay.html",
+        team: "team.html"
       };
 
       var frame = document.getElementById("app-frame");
@@ -49,12 +53,15 @@
         var key = getRouteFromHash();
         var target = routes[key] || routes.upload;
 
+        // Prevent unnecessary reload loop
         if (frame.getAttribute("src") !== target) {
           frame.setAttribute("src", target);
         }
       }
 
       window.addEventListener("hashchange", setPageFromHash);
+
+      // Initial load
       setPageFromHash();
     })();
   </script>
