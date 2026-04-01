@@ -1524,7 +1524,7 @@ async function processFile(file) {
   formData.append('file', file);
 
   try {
-    const response = await fetch('http://localhost:5000/api/upload', {
+    const response = await fetch('/api/upload', {
       method: 'POST',
       body: formData
     });
@@ -1578,7 +1578,7 @@ async function removeSource(sourceId) {
     if (!source) return;
 
     // Call backend DELETE endpoint
-    const response = await fetch(`http://localhost:5000/api/data/${source.sourceId || sourceId}`, {
+    const response = await fetch(`/api/data/${source.sourceId || sourceId}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -1818,7 +1818,7 @@ renderSources();
 // ── LOAD SOURCES FROM BACKEND ──
 async function loadSources() {
   try {
-    const response = await fetch("http://localhost:5000/api/sources");
+    const response = await fetch('/api/sources');
     const data = await response.json();
 
     if (response.ok && Array.isArray(data.sources)) {
