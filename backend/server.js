@@ -98,12 +98,14 @@ app.get("/", (req, res) => {
   res.sendFile(appShellPath);
 });
 
+// API fallback: never return HTML for unknown API routes
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: "API route not found" });
+});
+
 // ✅ Fallback route (NO wildcard)
 app.use((req, res) => {
   if (!appShellPath) {
-    if (req.path.startsWith("/api")) {
-      return res.status(404).json({ error: "API route not found" });
-    }
     return sendFrontendUnavailablePage(res);
   }
   res.sendFile(appShellPath);

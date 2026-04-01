@@ -16,6 +16,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let trendChartInstance = null;
     let sentimentDonutInstance = null;
 
+    async function parseApiError(response, fallbackMessage) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            const err = await response.json();
+            return err.details || err.error || fallbackMessage;
+        }
+
+        const text = await response.text();
+        if (text && text.trim().startsWith('<')) {
+            return `${fallbackMessage}. Server returned HTML instead of JSON.`;
+        }
+        return text || fallbackMessage;
+    }
+
     async function fetchAIReport() {
         const urlParams = new URLSearchParams(window.location.search);
         const sourceId = urlParams.get('sourceId');
@@ -31,7 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.status === 404) {
                     showGenerateReportUI(sourceId);
                 } else {
-                    throw new Error(`Server error: ${response.statusText}`);
+                    const message = await parseApiError(response, `Server error: ${response.statusText}`);
+                    throw new Error(message);
                 }
                 return;
             }
@@ -60,8 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.details || `Failed to generate report: ${response.statusText}`);
+                const message = await parseApiError(response, `Failed to generate report: ${response.statusText}`);
+                throw new Error(message);
             }
             
             // After generating, reload the page to show the new report.
