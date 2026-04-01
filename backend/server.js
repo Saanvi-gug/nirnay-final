@@ -18,6 +18,14 @@ const indexFilePath = firstExistingPath([
   path.resolve(process.cwd(), "index.html")
 ]);
 
+const nirnayPagePath = firstExistingPath([
+  path.resolve(__dirname, "../pages/nirnay.html"),
+  path.resolve(__dirname, "pages/nirnay.html"),
+  path.resolve(process.cwd(), "pages/nirnay.html")
+]);
+
+const appShellPath = indexFilePath || nirnayPagePath;
+
 const assetsDirPath = firstExistingPath([
   path.resolve(__dirname, "../assets"),
   path.resolve(__dirname, "assets"),
@@ -30,7 +38,7 @@ const pagesDirPath = firstExistingPath([
   path.resolve(process.cwd(), "pages")
 ]);
 
-const staticRootPath = indexFilePath ? path.dirname(indexFilePath) : null;
+const staticRootPath = appShellPath ? path.dirname(appShellPath) : null;
 
 function sendFrontendUnavailablePage(res) {
   res.status(200).type("html").send(`<!doctype html>
@@ -84,23 +92,23 @@ if (staticRootPath) {
 }
 
 app.get("/", (req, res) => {
-  if (!indexFilePath) {
+  if (!appShellPath) {
     return sendFrontendUnavailablePage(res);
   }
-  res.sendFile(indexFilePath);
+  res.sendFile(appShellPath);
 });
 
 // ✅ Fallback route (NO wildcard)
 app.use((req, res) => {
-  if (!indexFilePath) {
+  if (!appShellPath) {
     if (req.path.startsWith("/api")) {
       return res.status(404).json({ error: "API route not found" });
     }
     return sendFrontendUnavailablePage(res);
   }
-  res.sendFile(indexFilePath);
+  res.sendFile(appShellPath);
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
-console.log("Resolved index file:", indexFilePath || "NOT FOUND");
+console.log("Resolved app shell:", appShellPath || "NOT FOUND");
